@@ -1,0 +1,9 @@
+name: my_pairing_workspace
+
+packages:
+  - android_app
+  - desktop_app
+  - packages/**
+
+environment:
+  sdk: '^3.11.1'

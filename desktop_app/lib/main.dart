@@ -10,6 +10,8 @@ import 'package:desktop_android_pairing/crypto_helper.dart';
 void main() => runApp(DesktopApp());
 
 class DesktopApp extends StatelessWidget {
+  const DesktopApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -21,6 +23,8 @@ class DesktopApp extends StatelessWidget {
 }
 
 class ServerScreen extends StatefulWidget {
+  const ServerScreen({super.key});
+
   @override
   State<ServerScreen> createState() => _ServerScreenState();
 }
@@ -34,7 +38,7 @@ class _ServerScreenState extends State<ServerScreen> {
   bool _isServerRunning = false;
   String _sharedSecret = '';
   late CryptoHelper _crypto;
-  List<String> _messages = [];
+  final List<String> _messages = [];
   // Add these fields
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 5;

@@ -9,6 +9,8 @@ import 'package:android_app/crypto_helper.dart';
 void main() => runApp(AndroidApp());
 
 class AndroidApp extends StatelessWidget {
+  const AndroidApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -20,6 +22,8 @@ class AndroidApp extends StatelessWidget {
 }
 
 class ScannerScreen extends StatefulWidget {
+  const ScannerScreen({super.key});
+
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
 }
@@ -28,7 +32,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
   MobileScannerController controller = MobileScannerController();
   WebSocket? _socket;
   bool _isConnected = false;
-  List<String> _messages = [];
+  final List<String> _messages = [];
   final _textController = TextEditingController();
   String _sharedSecret = '';        
   CryptoHelper? _crypto;
