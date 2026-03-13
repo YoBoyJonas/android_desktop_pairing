@@ -7,3 +7,14 @@ packages:
 
 environment:
   sdk: '^3.11.1'
+
+sdkPath: .fvm/flutter_sdk
+
+scripts:
+  get:
+    run: melos exec -- fvm flutter pub get
+    description: Run 'flutter pub get' in all packages using FVM.
+
+  build_all:
+    run: melos exec -- fvm flutter build apk
+    description: Build all apps using the FVM SDK version.
