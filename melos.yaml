@@ -1,12 +1,7 @@
 name: my_pairing_workspace
 
 packages:
-  - android_app
-  - desktop_app
-  - packages/**
-
-environment:
-  sdk: '^3.11.1'
+  - packages/*
 
 sdkPath: .fvm/flutter_sdk
 
@@ -18,3 +13,11 @@ scripts:
   build_all:
     run: melos exec -- fvm flutter build apk
     description: Build all apps using the FVM SDK version.
+
+  run:desktop:
+    run: melos exec --scope=desktop_app -- fvm flutter run
+    description: Run the desktop app
+
+  run:android:
+    run: melos exec --scope=android_app -- fvm flutter run
+    description: Run the Android app
