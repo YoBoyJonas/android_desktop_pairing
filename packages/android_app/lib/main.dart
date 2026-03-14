@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:android_app/crypto_helper.dart';
+import 'package:nsd/nsd.dart' as nsd;
 
 void main() => runApp(AndroidApp());
 
@@ -34,18 +35,20 @@ class _ScannerScreenState extends State<ScannerScreen> {
   bool _isConnected = false;
   final List<String> _messages = [];
   final _textController = TextEditingController();
-  String _sharedSecret = '';        
+  String _sharedSecret = 'mDNS_DEFAULT';        
   CryptoHelper? _crypto;
   bool _isReconnecting = false;
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 5;
   String? _lastUrl; // remember last URL to reconnect to 
   Timer? _reconnectTimer;
+  nsd.Discovery? _activeDiscovery;
 
   @override
   void initState() {
     super.initState();
     _requestCameraPermission();
+    _startDiscovery();
   }
 
   Future<void> _requestCameraPermission() async {
@@ -59,49 +62,116 @@ class _ScannerScreenState extends State<ScannerScreen> {
         .replaceFirst('/connect', '/ws');
   }
 
-// Add timer field (you already have these declared, just unused)
-// _reconnectTimer, _reconnectAttempts, _isReconnecting, _lastUrl — already in your code!
+void _startDiscovery() async {
+  // Stop existing discovery if running
+  await _stopDiscovery();
+
+  final discovery = await nsd.startDiscovery('_dartchat._tcp');
+  setState(() => _activeDiscovery = discovery);
+  
+  discovery.addServiceListener((service, status) {
+    if (status == nsd.ServiceStatus.found && 
+        service.addresses != null && 
+        service.addresses!.isNotEmpty) {
+      
+      final ip = service.addresses!.first.address;
+      final port = service.port;
+
+      print('Resolved service at $ip:$port');
+      _stopDiscovery();
+
+      // We connect using a pairing request since we don't have a token yet
+      _connectToServer('ws://$ip:$port/ws?requestPairing=true&secret=mDNS_DEFAULT');
+    }
+  });
+}
+
+Future<void> _stopDiscovery() async {
+  if (_activeDiscovery != null) {
+    await nsd.stopDiscovery(_activeDiscovery!);
+    setState(() => _activeDiscovery = null);
+  }
+}
+
+void _onServiceFound(nsd.Service service) {
+  final ip = service.addresses?.first.address;
+  final port = service.port;
+  
+  if (ip != null) {
+    _stopDiscovery();
+
+    _connectToServer('ws://$ip:$port/ws?requestPairing=true');
+  }
+}
 
 Future<void> _connectToServer(String rawUrl) async {
   _lastUrl = rawUrl;
   final uri = Uri.parse(rawUrl);
-  final secret = uri.queryParameters['secret']!;
+  
+  // Safely extract secret or use default
+  final secret = uri.queryParameters['secret'] ?? 'mDNS_DEFAULT';
   _sharedSecret = secret;
   _crypto = CryptoHelper(secret);
 
-  final wsUrl = _toWsUrl(rawUrl);
+  // Determine the WebSocket URL
+  String wsUrl;
+  if (rawUrl.startsWith('http')) {
+    wsUrl = _toWsUrl(rawUrl);
+  } else {
+    wsUrl = rawUrl; // Already ws://
+  }
+  
   try {
-    final socket = await WebSocket.connect(wsUrl);
+    final socket = await WebSocket.connect(wsUrl).timeout(
+      const Duration(seconds: 10),
+    );
+
     setState(() {
       _socket = socket;
       _isConnected = true;
       _isReconnecting = false;
-      _reconnectAttempts = 0; // reset on success
+      _reconnectAttempts = 0;
     });
 
     socket.listen(
       (data) {
-        final decrypted = _crypto!.decrypt(data);
-        final decoded = jsonDecode(decrypted);
-        setState(() => _messages.add('🖥️ ${decoded['message']}'));
+        try {
+          final decrypted = _crypto!.decrypt(data);
+          final decoded = jsonDecode(decrypted);
+          if (decoded['message'] == 'Pairing Successful!') {
+            debugPrint("UPGRADING ENCRYPTION KEYS...");
+            setState(() {
+              _sharedSecret = decoded['secret'];
+              _crypto = CryptoHelper(_sharedSecret); 
+              _messages.add('🛡️ Secure connection established!');
+            });
+            return; 
+          }
+          setState(() => _messages.add('🖥️ ${decoded['message']}'));
+        } catch (e) {
+          debugPrint("Decryption error: $e");
+          setState(() => _messages.add('🖥️ $data')); 
+        }
       },
-      onDone: () {
-        setState(() {
-          _isConnected = false;
-          _socket = null;
-        });
-        _scheduleReconnect(); // ← only change here
-      },
-      onError: (e) {
-        setState(() {
-          _isConnected = false;
-          _socket = null;
-        });
-        _scheduleReconnect(); // ← and here
-      },
+      onDone: () => _handleDisconnection('Server closed'),
+      onError: (e) => _handleDisconnection('Error: $e'),
+      cancelOnError: true, 
     );
   } catch (e) {
-    _scheduleReconnect(); // ← and here
+    debugPrint("Connection failed: $e");
+    _scheduleReconnect();
+  }
+}
+
+// Helper to consolidate state cleanup
+void _handleDisconnection(String reason) {
+  debugPrint(reason);
+  if (_isConnected) {
+    setState(() {
+      _isConnected = false;
+      _socket = null;
+    });
+    _scheduleReconnect();
   }
 }
 
@@ -229,26 +299,52 @@ void _disconnect() {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Scan QR Code'),
-        actions: [
-          IconButton(icon: Icon(Icons.keyboard), onPressed: _showManualEntryDialog),
-        ],
-      ),
-      body: MobileScanner(
-        controller: controller,
-        onDetect: (capture) {
-          for (final barcode in capture.barcodes) {
-            if (barcode.rawValue != null) {
-              controller.stop();
-              _connectToServer(barcode.rawValue!);
-              break;
+    appBar: AppBar(
+      title: const Text('Connect to Desktop'),
+      actions: [
+        // Button to trigger mDNS discovery
+        IconButton(
+          icon: Icon(_activeDiscovery != null ? Icons.sync : Icons.search), 
+          onPressed: _startDiscovery,
+        ),
+        IconButton(
+          icon: const Icon(Icons.keyboard), 
+          onPressed: _showManualEntryDialog,
+        ),
+      ],
+    ),
+    body: Stack(
+      children: [
+        MobileScanner(
+          controller: controller,
+          onDetect: (capture) {
+            for (final barcode in capture.barcodes) {
+              if (barcode.rawValue != null) {
+                controller.stop();
+                _connectToServer(barcode.rawValue!);
+                break;
+              }
             }
-          }
-        },
-      ),
-    );
-  }
+          },
+        ),
+        if (_activeDiscovery != null)
+          const Positioned(
+            bottom: 20,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text("Searching for Desktop via mDNS..."),
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
 
   @override
   void dispose() {

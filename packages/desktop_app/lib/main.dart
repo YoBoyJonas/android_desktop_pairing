@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:desktop_app/crypto_helper.dart';
+import 'package:nsd/nsd.dart';
 
 void main() => runApp(DesktopApp());
 
@@ -39,16 +40,17 @@ class _ServerScreenState extends State<ServerScreen> {
   String _sharedSecret = '';
   late CryptoHelper _crypto;
   final List<String> _messages = [];
-  // Add these fields
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 5;
   Timer? _reconnectTimer;
+  Registration? _registration;
 
 
   @override
   void initState() {
     super.initState();
     _startServer();
+    _startmDNS();
   }
 
   Future<void> _startServer() async {
@@ -60,23 +62,53 @@ class _ServerScreenState extends State<ServerScreen> {
 
     setState(() => _isServerRunning = true);
     //websocket
-    _server!.listen((HttpRequest request) async {
-      final token = request.uri.queryParameters['token'];
-      if (token != _sessionToken) {
-        request.response
-          ..statusCode = HttpStatus.forbidden
-          ..close();
-        return;
-      }
+_server!.listen((HttpRequest request) async {
+  final query = request.uri.queryParameters;
+  final token = query['token'];
+  final isPairingRequest = query['requestPairing'] == 'true';
 
-      if (WebSocketTransformer.isUpgradeRequest(request)) {
-        final socket = await WebSocketTransformer.upgrade(request);
-        _onClientConnected(socket);
-      }
-    });
+  if (token != _sessionToken && !isPairingRequest) {
+    request.response
+      ..statusCode = HttpStatus.forbidden
+      ..close();
+    return;
   }
 
+  if (WebSocketTransformer.isUpgradeRequest(request)) {
+    final socket = await WebSocketTransformer.upgrade(request);
+    
+    if (isPairingRequest) {
+      _handlePairingFlow(socket);
+    } else {
+      _onClientConnected(socket);
+    }
+  }
+});
+  }
+
+void _handlePairingFlow(WebSocket socket) {
+  setState(() {
+    _connectionStatus = 'Pairing request from phone...';
+  });
+
+  final pairingData = jsonEncode({
+    'message': 'Pairing Successful!',
+    'token': _sessionToken,
+    'secret': _sharedSecret,
+  });
+
+  final tempCrypto = CryptoHelper('mDNS_DEFAULT');
+  socket.add(tempCrypto.encrypt(pairingData));
+
+  Future.delayed(Duration(milliseconds: 500), () {
+    _onClientConnected(socket);
+  });
+}
+
+
   void _onClientConnected(WebSocket socket) {
+  socket.pingInterval = const Duration(seconds: 5); 
+
   setState(() {
     _connectedClient = socket;
     _connectionStatus = 'Phone connected!';
@@ -89,22 +121,21 @@ class _ServerScreenState extends State<ServerScreen> {
       setState(() => _messages.add('📱 ${decoded['message']}'));
     },
     onDone: () {
-      setState(() {
-        _connectedClient = null;
-        _connectionStatus = 'Disconnected — waiting for reconnect...';
-      });
-      _scheduleReconnectWindow(); // ← add this
+      _cleanupClient();
+      _scheduleReconnectWindow();
     },
     onError: (e) {
-      setState(() {
-        _connectedClient = null;
-        _connectionStatus = 'Error: $e';
-      });
-      _scheduleReconnectWindow(); // ← add this
+      _cleanupClient();
+      _scheduleReconnectWindow();
     },
   );
+}
 
-  socket.add(_crypto.encrypt(jsonEncode({'message': 'Hello from Desktop!'})));
+void _cleanupClient() {
+  setState(() {
+    _connectedClient = null;
+    _connectionStatus = 'Disconnected';
+  });
 }
 
 void _scheduleReconnectWindow() {
@@ -147,13 +178,34 @@ void _scheduleReconnectWindow() {
     return tokenBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 
-  @override
-  void dispose() {
-    _reconnectTimer?.cancel();
-    _connectedClient?.close();
-    _server?.close();
-    super.dispose();
+Future<void> _startmDNS() async {
+  try {
+    final registration = await register(
+      Service(
+        name: 'Desktop-Server', 
+        type: '_dartchat._tcp', 
+        port: 8080
+      )
+    );
+    
+    _registration = registration;
+    
+    print('mDNS Service Registered: ${_registration!.service.name}');
+  } catch (e) {
+    print('mDNS Registration failed: $e');
   }
+}
+
+@override
+void dispose() {
+  _reconnectTimer?.cancel();
+  _connectedClient?.close();
+  _server?.close();
+  if (_registration != null) {
+    unregister(_registration!); // Clean up mDNS
+  }
+  super.dispose();
+}
 
   final _textController = TextEditingController();
 

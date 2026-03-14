@@ -32,7 +32,8 @@ dependencies:
     sdk: flutter
   encrypt: ^5.0.3
   pointycastle: ^3.7.3
-  shared_core: any
+  shared_core:
+    path: ../shared_core
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
