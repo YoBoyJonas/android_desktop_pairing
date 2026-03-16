@@ -302,6 +302,17 @@ void _disconnect() {
     appBar: AppBar(
       title: const Text('Connect to Desktop'),
       actions: [
+        IconButton(
+    icon: const Icon(Icons.computer), // A computer icon for local test
+    tooltip: 'Connect to Localhost',
+    onPressed: () {
+      _connectToServer('ws://127.0.0.1:8080/ws?requestPairing=true&secret=mDNS_DEFAULT');
+    },
+  ),
+  IconButton(
+    icon: Icon(_activeDiscovery != null ? Icons.sync : Icons.search), 
+    onPressed: _startDiscovery,
+  ),
         // Button to trigger mDNS discovery
         IconButton(
           icon: Icon(_activeDiscovery != null ? Icons.sync : Icons.search), 
