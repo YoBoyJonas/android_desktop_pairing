@@ -7,12 +7,14 @@ class ChatScreen extends StatefulWidget {
   final WebSocket socket;
   final CryptoHelper crypto;
   final VoidCallback onDisconnect;
+  final String serverUrl;
 
   const ChatScreen({
     super.key,
     required this.socket,
     required this.crypto,
     required this.onDisconnect,
+    required this.serverUrl,
   });
 
   @override
@@ -22,34 +24,64 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final List<String> _messages = [];
   final _textController = TextEditingController();
+  late CryptoHelper _crypto;
 
   @override
   void initState() {
     super.initState();
+    _crypto = widget.crypto;
     widget.socket.listen(
-      (data) {
-        try {
-          final decrypted = widget.crypto.decrypt(data);
-          final decoded = jsonDecode(decrypted);
-          setState(() => _messages.add('🖥️ ${decoded['message']}'));
-        } catch (e) {
-          setState(() => _messages.add('🖥️ $data'));
-        }
-      },
-      onDone: () {
-        widget.onDisconnect();
-        Navigator.pop(context);
-      },
-      onError: (_) {
-        widget.onDisconnect();
-        Navigator.pop(context);
-      },
-      cancelOnError: true,
+      (data) async {
+      try {
+      final decrypted = _crypto.decrypt(data);
+      final decoded = jsonDecode(decrypted);
+
+if (decoded['secret'] != null && decoded['token'] != null) {
+  final newSecret = decoded['secret'];
+  final token = decoded['token'];
+
+  await widget.socket.close();
+
+  final uri = Uri.parse(widget.serverUrl);
+
+  final newWsUrl =
+      'ws://${uri.host}:${uri.port}/ws?token=$token';
+
+  try {
+    final newSocket = await WebSocket.connect(newWsUrl);
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          socket: newSocket,
+          crypto: CryptoHelper(newSecret),
+          serverUrl: newWsUrl, // 👈 IMPORTANT
+          onDisconnect: widget.onDisconnect,
+        ),
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Reconnect failed: $e')),
     );
   }
 
+  return;
+}
+
+      // Normal message
+      setState(() => _messages.add('🖥️ ${decoded['message']}'));
+    } catch (e) {
+      setState(() => _messages.add('🖥️ $data'));
+    }
+  });
+  }
+
   void _sendMessage(String message) {
-    final encrypted = widget.crypto.encrypt(jsonEncode({'message': message}));
+    final encrypted = _crypto.encrypt(jsonEncode({'message': message}));
     widget.socket.add(encrypted);
     setState(() => _messages.add('📱 $message'));
   }

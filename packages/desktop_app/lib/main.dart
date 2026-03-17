@@ -79,28 +79,38 @@ class _ServerScreenState extends State<ServerScreen> {
     // Start mDNS only after server is confirmed running
     await _startmDNS();
 
-    _server!.listen((HttpRequest request) async {
-      final query = request.uri.queryParameters;
-      final token = query['token'];
-      final isPairingRequest = query['requestPairing'] == 'true';
+_server!.listen((HttpRequest request) async {
+  final path = request.uri.path;
+  final query = request.uri.queryParameters;
 
-      if (token != _sessionToken && !isPairingRequest) {
-        request.response
-          ..statusCode = HttpStatus.forbidden
-          ..close();
-        return;
-      }
+  final token = query['token'];
+  final isPairingRequest = query['requestPairing'] == 'true';
 
-      if (WebSocketTransformer.isUpgradeRequest(request)) {
-        final socket = await WebSocketTransformer.upgrade(request);
+  // ✅ Allow /ws and /connect
+  if (path != '/ws' && path != '/connect') {
+    request.response
+      ..statusCode = HttpStatus.notFound
+      ..close();
+    return;
+  }
 
-        if (isPairingRequest) {
-          _handlePairingFlow(socket);
-        } else {
-          _onClientConnected(socket);
-        }
-      }
-    });
+  if (token != _sessionToken && !isPairingRequest) {
+    request.response
+      ..statusCode = HttpStatus.forbidden
+      ..close();
+    return;
+  }
+
+  if (WebSocketTransformer.isUpgradeRequest(request)) {
+    final socket = await WebSocketTransformer.upgrade(request);
+
+    if (isPairingRequest) {
+      _handlePairingFlow(socket);
+    } else {
+      _onClientConnected(socket);
+    }
+  }
+});
   }
 
   void _handlePairingFlow(WebSocket socket) {

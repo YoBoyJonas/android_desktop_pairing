@@ -63,6 +63,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
           builder: (_) => ChatScreen(
             socket: socket,
             crypto: _crypto!,
+            serverUrl: wsUrl,
             onDisconnect: () {},
           ),
         ),

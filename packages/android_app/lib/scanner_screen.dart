@@ -62,6 +62,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           builder: (_) => ChatScreen(
             socket: socket,
             crypto: _crypto!,
+            serverUrl: wsUrl,
             onDisconnect: () {
               controller.start();
             },
