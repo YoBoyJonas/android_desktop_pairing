@@ -4,5 +4,5 @@
 library;
 
 export 'src/shared_core_base.dart';
-
+export 'package:nsd/nsd.dart';
 // TODO: Export any libraries intended for clients of this package.
