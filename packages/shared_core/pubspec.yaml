@@ -1,6 +1,7 @@
 name: shared_core
 description: A starting point for Dart libraries or applications.
 version: 1.0.0
+resolution: workspace
 
 environment:
   sdk: '^3.11.0'

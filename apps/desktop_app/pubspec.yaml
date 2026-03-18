@@ -18,6 +18,8 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.1
 
@@ -30,13 +32,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shelf: ^1.4.0
-  qr_flutter: ^4.1.0
-  network_info_plus: ^5.0.0
-  encrypt: ^5.0.3
   pointycastle: ^3.7.3
   shared_core:
-    path: ../shared_core
+    path: ../../packages/shared_core
+  communication_core:
+    path: ../../packages/communication_core
+  shared_ui:
+    path: ../../packages/shared_ui
+  crypto_helper:
+    path: ../../packages/crypto_helper
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

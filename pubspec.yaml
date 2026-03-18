@@ -1,29 +1,16 @@
-name: my_pairing_workspace
+name: android_desktop_pairing
 publish_to: none
 
 environment:
   sdk: ^3.11.1
 
 dev_dependencies:
-  melos: ^7.4.0
+  melos: ^7.4.1
 
-melos:
-  packages:
-    - packages/*
-
-  sdkPath: .fvm/flutter_sdk
-
-  scripts:
-    get:
-      run: melos exec -- fvm flutter pub get
-      description: Run flutter pub get in all packages
-
-    build_all:
-      run: melos exec -- fvm flutter build apk
-      description: Build all apps
-
-    run:desktop:
-      run: melos exec --scope=desktop_app -- fvm flutter run
-
-    run:android:
-      run: melos exec --scope=android_app -- fvm flutter run
+workspace:
+  - packages/communication_core
+  - packages/crypto_helper
+  - packages/shared_core
+  - packages/shared_ui
+  - apps/android_app
+  - apps/desktop_app

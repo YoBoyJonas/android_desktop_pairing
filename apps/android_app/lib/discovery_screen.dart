@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:android_app/crypto_helper.dart';
-import 'package:android_app/chat_screen.dart';
-import 'package:nsd/nsd.dart' as nsd;
+import 'package:communication_core/communication_core.dart';
+import 'chat_screen.dart';
 
 class DiscoveryScreen extends StatefulWidget {
   const DiscoveryScreen({super.key});
@@ -12,9 +10,10 @@ class DiscoveryScreen extends StatefulWidget {
 }
 
 class _DiscoveryScreenState extends State<DiscoveryScreen> {
-  nsd.Discovery? _activeDiscovery;
+  final _discovery = MdnsDiscovery();
+  final _client = WebSocketClient();
+  bool _isSearching = false;
   bool _isConnecting = false;
-  CryptoHelper? _crypto;
 
   @override
   void initState() {
@@ -23,58 +22,29 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   }
 
   Future<void> _startDiscovery() async {
-    await _stopDiscovery();
-    final discovery = await nsd.startDiscovery('_dartchat._tcp');
-    setState(() => _activeDiscovery = discovery);
-
-    discovery.addServiceListener((service, status) {
-      if (status == nsd.ServiceStatus.found &&
-          service.addresses != null &&
-          service.addresses!.isNotEmpty) {
-        final ip = service.addresses!.first.address;
-        final port = service.port;
-        _stopDiscovery();
-        _connectToServer('ws://$ip:$port/ws?requestPairing=true&secret=mDNS_DEFAULT');
-      }
-    });
+    setState(() { _isSearching = true; _isConnecting = false; });
+    await _discovery.start(onFound: _onServiceFound);
   }
 
-  Future<void> _stopDiscovery() async {
-    if (_activeDiscovery != null) {
-      await nsd.stopDiscovery(_activeDiscovery!);
-      setState(() => _activeDiscovery = null);
-    }
-  }
-
-  Future<void> _connectToServer(String wsUrl) async {
-    setState(() => _isConnecting = true);
-    _crypto = CryptoHelper('mDNS_DEFAULT');
+  Future<void> _onServiceFound(String ip, int port) async {
+    await _discovery.stop();
+    setState(() { _isSearching = false; _isConnecting = true; });
 
     try {
-      final socket = await WebSocket.connect(wsUrl).timeout(
-        const Duration(seconds: 10),
-      );
-
+      await _client.connectFromMdns(ip, port);
       if (!mounted) return;
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ChatScreen(
-            socket: socket,
-            crypto: _crypto!,
-            serverUrl: wsUrl,
-            onDisconnect: () {},
-          ),
+          builder: (_) => ChatScreen(client: _client, onDisconnect: () {}),
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isConnecting = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Connection failed: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Connection failed: $e')),
+      );
     }
   }
 
@@ -86,7 +56,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Retry',
             onPressed: _startDiscovery,
           ),
         ],
@@ -99,7 +68,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               const Text('Connecting...'),
-            ] else if (_activeDiscovery != null) ...[
+            ] else if (_isSearching) ...[
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               const Text('Searching for desktop on network...'),
@@ -121,7 +90,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
 
   @override
   void dispose() {
-    _stopDiscovery();
+    _discovery.stop();
+    _client.dispose();
     super.dispose();
   }
 }
