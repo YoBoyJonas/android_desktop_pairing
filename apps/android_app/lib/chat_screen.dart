@@ -26,7 +26,8 @@ class _ChatScreenState extends State<ChatScreen> {
       (m) => setState(() => _messages.add(m)),
     );
     widget.client.statusStream.listen((status) {
-      if (status == ConnectionStatus.disconnected && mounted) {
+      if ((status == ConnectionStatus.disconnected ||
+          status == ConnectionStatus.error) && mounted) {
         Navigator.pop(context);
         widget.onDisconnect();
       }

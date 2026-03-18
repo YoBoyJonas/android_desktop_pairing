@@ -109,14 +109,12 @@ class WebSocketServer {
 
   // ── Pairing ───────────────────────────────────────────────────────────────
 
-  Future<void> _handlePairing(WebSocket socket) async {
-    _emit(ConnectionStatus.pairing);
-    socket.add(_pairingService.buildPairingPayload(credentials));
-    // Small delay so phone can process the payload before we start
-    // treating the socket as the live connection
-    await Future.delayed(const Duration(milliseconds: 500));
-    _attachSocket(socket);
-  }
+Future<void> _handlePairing(WebSocket socket) async {
+  _emit(ConnectionStatus.pairing);
+  socket.add(_pairingService.buildPairingPayload(credentials));
+  await Future.delayed(const Duration(milliseconds: 300));
+  await socket.close();
+}
 
   // ── Socket management ─────────────────────────────────────────────────────
 

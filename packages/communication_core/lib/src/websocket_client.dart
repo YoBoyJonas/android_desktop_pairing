@@ -52,7 +52,7 @@ class WebSocketClient {
     _status = status;
     _statusController.add(status);
   }
-  
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;
@@ -79,18 +79,24 @@ class WebSocketClient {
     }
   }
 
-  void _attachSocket(WebSocket socket, String url, CryptoHelper crypto) {
-    _socket = socket;
-    _serverUrl = url;
-    _crypto = crypto;
-    _emit(ConnectionStatus.connected);
+bool _isUpgrading = false;
 
-    socket.listen(
-      _handleIncoming,
-      onDone: () => _emit(ConnectionStatus.disconnected),
-      onError: (_) => _emit(ConnectionStatus.error),
-    );
-  }
+void _attachSocket(WebSocket socket, String url, CryptoHelper crypto) {
+  _socket = socket;
+  _serverUrl = url;
+  _crypto = crypto;
+  _emit(ConnectionStatus.connected);
+
+  socket.listen(
+    _handleIncoming,
+    onDone: () {
+      if (!_isUpgrading) _emit(ConnectionStatus.disconnected);
+    },
+    onError: (_) {
+      if (!_isUpgrading) _emit(ConnectionStatus.error);
+    },
+  );
+}
 
   Future<void> _handleIncoming(dynamic data) async {
     try {
@@ -112,16 +118,21 @@ class WebSocketClient {
     }
   }
 
-  Future<void> _upgradeToPairedConnection(
-      String newSecret, String token) async {
-    final uri = Uri.parse(_serverUrl!);
-    final newUrl = 'ws://${uri.host}:${uri.port}/ws?token=$token';
+Future<void> _upgradeToPairedConnection(
+    String newSecret, String token) async {
+  final uri = Uri.parse(_serverUrl!);
+  final newUrl = 'ws://${uri.host}:${uri.port}/ws?token=$token';
 
-    await _socket?.close();
-    _socket = null;
+  _isUpgrading = true;
+  await _socket?.close();
+  _socket = null;
 
+  try {
     await _connect(newUrl, CryptoHelper(newSecret));
+  } finally {
+    _isUpgrading = false;
   }
+}
 
   String _toWsUrl(String url) => url
       .replaceFirst('http://', 'ws://')

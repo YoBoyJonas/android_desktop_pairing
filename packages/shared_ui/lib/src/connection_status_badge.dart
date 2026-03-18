@@ -11,6 +11,7 @@ class ConnectionStatusBadge extends StatelessWidget {
     final (label, color) = switch (status) {
       ConnectionStatus.connected    => ('Phone connected', Colors.green),
       ConnectionStatus.disconnected => ('Not connected',  Colors.grey),
+      ConnectionStatus.upgrading    => ('Upgrading...',   Colors.deepOrange),
       ConnectionStatus.pairing      => ('Pairing...',     Colors.orange),
       ConnectionStatus.error        => ('Error',          Colors.red),
     };
