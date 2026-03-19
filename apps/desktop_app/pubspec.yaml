@@ -32,15 +32,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  pointycastle: ^3.7.3
-  shared_core:
-    path: ../../packages/shared_core
   communication_core:
     path: ../../packages/communication_core
   shared_ui:
     path: ../../packages/shared_ui
-  crypto_helper:
-    path: ../../packages/crypto_helper
+  notification_service:
+    path: ../../packages/notification_service
+  window_to_front: ^0.0.3
+  window_manager: ^0.4.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

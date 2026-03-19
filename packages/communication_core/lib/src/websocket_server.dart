@@ -47,9 +47,11 @@ class WebSocketServer {
     credentials = _pairingService.generateCredentials();
     _crypto = CryptoHelper(credentials.sharedSecret);
 
-    _httpServer = await HttpServer.bind(InternetAddress.anyIPv4, port);
+    _httpServer = await HttpServer.bind(InternetAddress.anyIPv4, 0);//0 = random free
     _httpServer!.listen(_handleRequest);
   }
+
+  int get actualPort => _httpServer!.port;
 
   Future<void> dispose() async {
     _reconnectTimer?.cancel();

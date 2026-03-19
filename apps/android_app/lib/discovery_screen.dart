@@ -91,7 +91,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   @override
   void dispose() {
     _discovery.stop();
-    _client.dispose();
     super.dispose();
   }
 }

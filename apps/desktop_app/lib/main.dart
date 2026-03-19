@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:communication_core/communication_core.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:notification_service/notification_service.dart';
+import 'package:window_manager/window_manager.dart';
 
-void main() => runApp(const DesktopApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+
+  await NotificationService.instance.init(
+    onAction: (actionId) {
+      if (actionId == kOpenAppAction) {
+        windowManager.focus();
+      }
+    },
+  );
+
+  runApp(const DesktopApp());
+}
 
 class DesktopApp extends StatelessWidget {
   const DesktopApp({super.key});
@@ -20,10 +35,11 @@ class ServerScreen extends StatefulWidget {
   State<ServerScreen> createState() => _ServerScreenState();
 }
 
-class _ServerScreenState extends State<ServerScreen> {
+class _ServerScreenState extends State<ServerScreen> with WindowListener{
+  bool _isWindowFocused = true;
   late final WebSocketServer _server;
   late final MdnsService _mdns;
-  String? _ipAddress;  // nullable instead of late
+  String? _ipAddress;  
 
   ConnectionStatus _status = ConnectionStatus.disconnected;
   final List<ChatMessage> _messages = [];
@@ -31,6 +47,7 @@ class _ServerScreenState extends State<ServerScreen> {
   @override
   void initState() {
     super.initState();
+    windowManager.addListener(this);
     _init();
   }
 
@@ -39,14 +56,20 @@ class _ServerScreenState extends State<ServerScreen> {
     _mdns = MdnsService();
 
     await _server.start();
-
     final ip = await getLocalIpAddress();
     await _mdns.register(name: 'Desktop-Server', port: 8080);
 
     _server.statusStream.listen((s) => setState(() => _status = s));
-    _server.messagesStream.listen((m) => setState(() => _messages.add(m)));
+    _server.messagesStream.listen((m) {
+      setState(() => _messages.add(m));
+      if(!_isWindowFocused){
+      NotificationService.instance.showMessageNotification(
+      senderName: "android_app", 
+      messagePreview: m.text,
+      );}
+    });
 
-    setState(() => _ipAddress = ip);  // triggers rebuild once ready
+    setState(() => _ipAddress = ip); 
   }
 
   @override
@@ -59,7 +82,7 @@ class _ServerScreenState extends State<ServerScreen> {
     }
 
     final qrUrl = PairingService().buildPairingUrl(
-      _ipAddress!, 8080, _server.credentials,
+      _ipAddress!, _server.actualPort, _server.credentials,
     );
 
     return Scaffold(
@@ -86,8 +109,21 @@ class _ServerScreenState extends State<ServerScreen> {
 
   @override
   void dispose() {
+    windowManager.removeListener(this);
     _server.dispose();
     _mdns.unregister();
     super.dispose();
   }
+
+  @override
+  void onWindowFocus() => setState(() => _isWindowFocused = true);
+
+  @override
+  void onWindowBlur() => setState(() => _isWindowFocused = false);
+
+  @override
+  void onWindowMinimize() => setState(() => _isWindowFocused = false);
+
+  @override
+  void onWindowRestore() => setState(() => _isWindowFocused = true);
 }

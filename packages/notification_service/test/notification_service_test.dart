@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:crypto_helper/crypto_helper.dart';
+import 'package:notification_service/notification_service.dart';
 
 void main() {
   test('adds one to input values', () {

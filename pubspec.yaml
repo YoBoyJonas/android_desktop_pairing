@@ -9,8 +9,7 @@ dev_dependencies:
 
 workspace:
   - packages/communication_core
-  - packages/crypto_helper
-  - packages/shared_core
   - packages/shared_ui
+  - packages/notification_service
   - apps/android_app
   - apps/desktop_app

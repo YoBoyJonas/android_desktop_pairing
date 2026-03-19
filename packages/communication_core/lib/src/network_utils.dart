@@ -6,13 +6,18 @@ Future<String> getLocalIpAddress() async {
     includeLoopback: false,
   );
 
-  // Prefer common LAN ranges: 192.168.x.x, 10.x.x.x, 172.16-31.x.x
+  for (final interface in interfaces) {
+  print('Interface: ${interface.name}');
+  for (final addr in interface.addresses) {
+    print('  ${addr.address}');
+  }
+}
+  // Prefer common LAN ranges: 192.168.x.x, 10.x.x.x
   for (final interface in interfaces) {
     for (final addr in interface.addresses) {
       final ip = addr.address;
       if (ip.startsWith('192.168.') ||
-          ip.startsWith('10.')       ||
-          _is172Range(ip)) {
+          ip.startsWith('10.')) {
         return ip;
       }
     }
@@ -26,11 +31,4 @@ Future<String> getLocalIpAddress() async {
   }
 
   return 'localhost';
-}
-
-bool _is172Range(String ip) {
-  final parts = ip.split('.');
-  if (parts.length != 4) return false;
-  final second = int.tryParse(parts[1]) ?? 0;
-  return parts[0] == '172' && second >= 16 && second <= 31;
 }

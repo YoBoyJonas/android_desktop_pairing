@@ -4,11 +4,12 @@
     <modules>
 <module fileurl="file://$PROJECT_DIR$/apps/android_app/melos_android_app.iml" filepath="$PROJECT_DIR$/apps/android_app/melos_android_app.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/communication_core/melos_communication_core.iml" filepath="$PROJECT_DIR$/packages/communication_core/melos_communication_core.iml"/>
-<module fileurl="file://$PROJECT_DIR$/packages/crypto_helper/melos_crypto_helper.iml" filepath="$PROJECT_DIR$/packages/crypto_helper/melos_crypto_helper.iml"/>
 <module fileurl="file://$PROJECT_DIR$/apps/desktop_app/melos_desktop_app.iml" filepath="$PROJECT_DIR$/apps/desktop_app/melos_desktop_app.iml"/>
-<module fileurl="file://$PROJECT_DIR$/packages/shared_core/melos_shared_core.iml" filepath="$PROJECT_DIR$/packages/shared_core/melos_shared_core.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/notification_service/melos_notification_service.iml" filepath="$PROJECT_DIR$/packages/notification_service/melos_notification_service.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/shared_ui/melos_shared_ui.iml" filepath="$PROJECT_DIR$/packages/shared_ui/melos_shared_ui.iml"/>
 <module fileurl="file://$PROJECT_DIR$/melos_android_desktop_pairing.iml" filepath="$PROJECT_DIR$/melos_android_desktop_pairing.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/crypto_helper/melos_crypto_helper.iml" filepath="$PROJECT_DIR$/packages/crypto_helper/melos_crypto_helper.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/shared_core/melos_shared_core.iml" filepath="$PROJECT_DIR$/packages/shared_core/melos_shared_core.iml"/>
     </modules>
   </component>
 </project>
