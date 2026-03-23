@@ -8,13 +8,9 @@ import 'crypto_helper.dart';
 import 'pairing_service.dart';
 
 class WebSocketServer {
-  final int port;
   final PairingService _pairingService;
 
-  WebSocketServer({
-    this.port = 8080,
-    PairingService? pairingService,       // injectable for tests
-  }) : _pairingService = pairingService ?? PairingService();
+  WebSocketServer() : _pairingService = PairingService();
 
   // ── Public state streams ──────────────────────────────────────────────────
 

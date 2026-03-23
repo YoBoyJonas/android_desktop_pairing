@@ -5,13 +5,7 @@ Future<String> getLocalIpAddress() async {
     type: InternetAddressType.IPv4,
     includeLoopback: false,
   );
-
-  for (final interface in interfaces) {
-  print('Interface: ${interface.name}');
-  for (final addr in interface.addresses) {
-    print('  ${addr.address}');
-  }
-}
+  
   // Prefer common LAN ranges: 192.168.x.x, 10.x.x.x
   for (final interface in interfaces) {
     for (final addr in interface.addresses) {

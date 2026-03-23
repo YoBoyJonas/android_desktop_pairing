@@ -13,3 +13,21 @@ workspace:
   - packages/notification_service
   - apps/android_app
   - apps/desktop_app
+
+melos:
+  scripts:
+    desktop:
+      run: fvm flutter run -d windows
+      exec:
+        concurrency: 1
+      packageFilters:
+        scope: desktop_app 
+      description: Run the desktop app
+
+    android:
+      run: fvm flutter run -d android
+      exec:
+        concurrency: 1
+      packageFilters:
+        scope: android_app
+      description: Run the android app
